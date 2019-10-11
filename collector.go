@@ -24,12 +24,15 @@ func NewCollector() *Collector {
 }
 
 func (c *Collector) GetLogrusHook() *LogrusHook {
-	hook := &LogrusHook{}
-	hook.collector = c
+	hook := newLogrusHook(c)
 	return hook
 }
 func (c *Collector) AddReceiver(receiver Receiver) {
 	c.receivers = append(c.receivers, receiver)
+}
+
+func (c *Collector) Log(log *Log) {
+	c.logChan <- log
 }
 
 func LogrusWithFields(logger *logrus.Logger, endTime, beginTime time.Time, url, src string, userid, code int, params []byte) *logrus.Entry {
