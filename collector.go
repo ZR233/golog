@@ -27,6 +27,10 @@ func (c *Collector) GetLogrusHook() *LogrusHook {
 	hook := newLogrusHook(c)
 	return hook
 }
+func (c *Collector) SetLevel(level LogLevel) {
+	c.logLevel = level
+}
+
 func (c *Collector) AddReceiver(receiver Receiver) {
 	c.receivers = append(c.receivers, receiver)
 }
