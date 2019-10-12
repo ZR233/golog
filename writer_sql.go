@@ -37,7 +37,7 @@ func NewWriterSQL(dialect, connStr, logTableName string) *WriterSQL {
 	if err != nil {
 		panic(err)
 	}
-	if err := db.AutoMigrate(&Log{}).Error; err != nil {
+	if err := db.AutoMigrate(&Log{tableName: logTableName}).Error; err != nil {
 		panic(err)
 	}
 

@@ -25,4 +25,9 @@ type Log struct {
 	OptUserId int
 	ExecTime  int
 	Msg       string `gorm:"type:varchar(400)"`
+	tableName string `gorm:"-"`
+}
+
+func (l Log) TableName() string {
+	return l.tableName
 }
