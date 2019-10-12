@@ -5,21 +5,42 @@
 package golog
 
 import (
-	"database/sql"
 	"fmt"
+	"github.com/ZR233/goutils"
+	"github.com/jinzhu/gorm"
 	log2 "log"
 	"strings"
 	"time"
 )
 
 type WriterSQL struct {
-	db           *sql.DB
+	db           *gorm.DB
 	logChan      chan *Log
 	logTableName string
 }
 
-func NewWriterSQL(db *sql.DB, logTableName string) *WriterSQL {
+// Open initialize a new db connection, need to import driver first, e.g:
+//
+//     import _ "github.com/go-sql-driver/mysql"
+//     func main() {
+//       db, err := gorm.Open("mysql", "user:password@/dbname?charset=utf8&parseTime=True&loc=Local")
+//     }
+// GORM has wrapped some drivers, for easier to remember driver's import path, so you could import the mysql driver with
+//    import _ "github.com/jinzhu/gorm/dialects/mysql"
+//    // import _ "github.com/jinzhu/gorm/dialects/postgres"
+//    // import _ "github.com/jinzhu/gorm/dialects/sqlite"
+//    // import _ "github.com/jinzhu/gorm/dialects/mssql"
+func NewWriterSQL(dialect, connStr, logTableName string) *WriterSQL {
 	w := &WriterSQL{}
+
+	db, err := gorm.Open(dialect, connStr)
+	if err != nil {
+		panic(err)
+	}
+	if err := db.AutoMigrate(&Log{}).Error; err != nil {
+		panic(err)
+	}
+
 	w.db = db
 	w.logChan = make(chan *Log, 1)
 	w.logTableName = logTableName
@@ -68,21 +89,17 @@ loop:
 	db := w.db
 	for _, v := range logs {
 		sqlStr += `(?,?,?,?,?,?,?),`
-		args = append(args, v.Time, v.Trace, v.Level, v.Code, v.OptUserId, v.Msg, v.ExecTime)
+		args = append(args, v.Time, v.Trace, v.Level, v.Code, v.OptUserId, goutils.StringChineseMaxLen(v.Msg, 400), v.ExecTime)
 	}
 	sqlStr = strings.TrimRight(sqlStr, ",")
 
-	stmt, err := db.Prepare(sqlStr)
-	if err != nil {
-		panic(err)
-	}
-	defer stmt.Close()
+	db = db.Exec(sqlStr, args...)
 
-	r, err := stmt.Exec(args...)
+	err := db.Error
 	if err != nil {
 		panic(err)
 	}
-	insertCount, _ := r.RowsAffected()
+	insertCount := db.RowsAffected
 
 	log2.Println(fmt.Sprintf("%d records,insert %d to db, ", recordCount, insertCount))
 
