@@ -13,9 +13,9 @@ type Processor struct {
 	writers       []Writer
 }
 
-func NewProcessor() *Processor {
+func NewProcessor(consumer QueueConsumer) *Processor {
 	p := &Processor{}
-
+	p.queueConsumer = consumer
 	return p
 }
 
