@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
+// 日志收集类
 type Collector struct {
 	logLevel  LogLevel
 	logChan   chan *Log
-	receivers []Receiver
+	receivers []QueueProducer
 }
 
 func NewCollector() *Collector {
@@ -31,7 +32,7 @@ func (c *Collector) SetLevel(level LogLevel) {
 	c.logLevel = level
 }
 
-func (c *Collector) AddReceiver(receiver Receiver) {
+func (c *Collector) AddReceiver(receiver QueueProducer) {
 	c.receivers = append(c.receivers, receiver)
 }
 

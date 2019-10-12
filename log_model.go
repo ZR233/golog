@@ -26,7 +26,3 @@ type Log struct {
 	ExecTime  int
 	Msg       string `gorm:"type:varchar(400)"`
 }
-
-func (Log) TableName() string {
-	return "s_log"
-}
