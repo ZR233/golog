@@ -107,14 +107,14 @@ func NewQueueConsumerKafka(addrs []string, topic string) *QueueConsumerKafka {
 
 	return r
 }
-func (q *QueueConsumerKafka) Get() (log *Log) {
+func (q *QueueConsumerKafka) Get() (log *Log, err error) {
 	select {
 	case msg, ok := <-q.partitionConsumer.Messages():
 		if ok {
 			log = &Log{}
-			err := json.Unmarshal(msg.Value, log)
+			err = json.Unmarshal(msg.Value, log)
 			if err != nil {
-				panic(err)
+				return
 			}
 
 			_, _ = q.offsetFile.Seek(0, 0)
@@ -124,5 +124,5 @@ func (q *QueueConsumerKafka) Get() (log *Log) {
 		break
 	}
 
-	return log
+	return log, nil
 }
