@@ -6,6 +6,7 @@ package golog
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 	"os"
@@ -120,30 +121,19 @@ func NewQueueConsumerKafka(addrs []string, topic string) (q *QueueConsumerKafka,
 	return
 }
 func (q *QueueConsumerKafka) Get() (log *Log, err error) {
-	//select {
-	//case msg, ok := <-q.partitionConsumer.Messages():
-	//	if ok {
-	//		log = &Log{}
-	//		err = json.Unmarshal(msg.Value, log)
-	//		if err != nil {
-	//			return
-	//		}
-	//
-	//		_, _ = q.offsetFile.Seek(0, 0)
-	//		_, _ = q.offsetFile.WriteString(strconv.FormatInt(msg.Offset+1, 10))
-	//	}
-	//case <-q.signals:
-	//	break
-	//}
+	log = &Log{}
+
 	select {
 	case msg, ok := <-q.conn.Messages():
 		if ok {
-			log = &Log{}
+
 			err = json.Unmarshal(msg.Value, log)
 			if err != nil {
 				return
 			}
 			q.conn.MarkOffset(msg, "")
+		} else {
+			err = errors.New("kafka can not get msg")
 		}
 	case <-q.signals:
 		break
