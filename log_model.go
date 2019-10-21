@@ -24,7 +24,7 @@ type Log struct {
 	Code      int       `gorm:"type:int;index:idx_log_code"`
 	OptUserId int
 	ExecTime  int
-	Msg       string `gorm:"type:varchar(400)"`
+	Msg       string `gorm:"type:varchar(2000)"`
 	tableName string `gorm:"-"`
 }
 

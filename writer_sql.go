@@ -98,7 +98,7 @@ loop:
 	db := w.db
 	for _, v := range logs {
 		sqlStr += `(?,?,?,?,?,?,?),`
-		args = append(args, v.Time, v.Trace, v.Level, v.Code, v.OptUserId, goutils.StringChineseMaxLen(v.Msg, 400), v.ExecTime)
+		args = append(args, v.Time, v.Trace, v.Level, v.Code, v.OptUserId, goutils.StringChineseMaxLen(v.Msg, 2000), v.ExecTime)
 	}
 	sqlStr = strings.TrimRight(sqlStr, ",")
 	beginTime := time.Now()
