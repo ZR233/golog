@@ -11,17 +11,21 @@ import (
 	"os"
 )
 
+const (
+	topic = "logstash"
+)
+
 type LogstashFrontKafka struct {
 	producer   sarama.SyncProducer
-	topic      string
 	logChan    chan *logrus.Entry
 	fileLogger *logrus.Logger
+	appName    string
 }
 
-func NewLogstashFrontKafka(fileLogPath string, kafkaAddrs []string, topic string) *LogstashFrontKafka {
+func NewLogstashFrontKafka(appName, fileLogPath string, kafkaAddrs []string) *LogstashFrontKafka {
 	r := &LogstashFrontKafka{}
 	r.fileLogger = logrus.New()
-
+	r.appName = appName
 	src, err := os.OpenFile(fileLogPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		fmt.Println("err", err)
@@ -44,7 +48,6 @@ func NewLogstashFrontKafka(fileLogPath string, kafkaAddrs []string, topic string
 		r.fileLogger.Panic(err)
 	}
 	r.producer = producer
-	r.topic = topic
 
 	go func() {
 		for {
@@ -72,7 +75,7 @@ func (l *LogstashFrontKafka) write() {
 		Partition: int32(0),
 		Key:       sarama.StringEncoder("key"),
 		Value:     sarama.StringEncoder(logString),
-		Topic:     l.topic,
+		Topic:     topic,
 	}
 
 	_, _, err = l.producer.SendMessage(msg)
@@ -102,6 +105,7 @@ type Hook struct {
 }
 
 func (h Hook) Fire(entry *logrus.Entry) error {
+	entry = entry.WithField("app", h.core.appName)
 	h.core.logChan <- entry
 	return nil
 }
