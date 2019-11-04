@@ -30,6 +30,7 @@ type LogstashFrontKafkaConfig struct {
 	//trace字段预设值
 	TracePrefix string
 	KafkaAddrs  []string
+	LogLevel    LogLevel
 }
 
 func NewLogstashFrontKafkaConfig() *LogstashFrontKafkaConfig {

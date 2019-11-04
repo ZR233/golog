@@ -4,7 +4,10 @@
 */
 package golog
 
-import "time"
+import (
+	"github.com/sirupsen/logrus"
+	"time"
+)
 
 type LogLevel int8
 
@@ -12,10 +15,14 @@ const (
 	LogLevelDebug LogLevel = iota
 	LogLevelInfo
 	LogLevelWarn
-	LogLevelPanic
 	LogLevelError
 	LogLevelFatal
+	LogLevelPanic
 )
+
+func (l LogLevel) ToLogrusLevel() logrus.Level {
+	return logrus.Level(-l + 5)
+}
 
 type Log struct {
 	Time      time.Time `gorm:"index:idx_log_time"`
