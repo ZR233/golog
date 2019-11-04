@@ -5,7 +5,6 @@
 package golog
 
 import (
-	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -26,9 +25,9 @@ func NewLogstashFrontKafka(appName, fileLogPath string, kafkaAddrs []string) *Lo
 	r := &LogstashFrontKafka{}
 	r.fileLogger = logrus.New()
 	r.appName = appName
-	src, err := os.OpenFile(fileLogPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	src, err := os.OpenFile(fileLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend)
 	if err != nil {
-		fmt.Println("err", err)
+		panic(err)
 	}
 
 	r.fileLogger.Out = src
