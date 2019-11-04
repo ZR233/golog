@@ -123,16 +123,15 @@ type Hook struct {
 
 func (h Hook) Fire(entry *logrus.Entry) error {
 	entryNew := entry.WithField("app", h.core.config.AppName)
-
-	if trace, ok := entry.Data["trace"]; ok {
-		if trace, ok := trace.(string); ok {
-			entryNew.Data["trace"] = strings.Join([]string{
-				h.core.config.TracePrefix,
-				trace,
+	trace := h.core.config.TracePrefix
+	if trace_, ok := entry.Data["trace"]; ok {
+		if trace_, ok := trace_.(string); ok {
+			trace = strings.Join([]string{
+				trace, trace_,
 			}, "/")
 		}
 	}
-
+	entryNew.Data["trace"] = trace
 	entryNew.Level = entry.Level
 	entryNew.Message = entry.Message
 	entryNew.Time = entry.Time
