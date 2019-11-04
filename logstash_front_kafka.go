@@ -106,6 +106,8 @@ type Hook struct {
 func (h Hook) Fire(entry *logrus.Entry) error {
 	entryNew := entry.WithField("app", h.core.appName)
 	entryNew.Level = entry.Level
+	entryNew.Message = entry.Message
+	entryNew.Time = entry.Time
 	h.core.logChan <- entryNew
 	return nil
 }
