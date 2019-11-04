@@ -8,6 +8,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/sirupsen/logrus"
 	"os"
+	"strings"
 )
 
 const (
@@ -18,14 +19,31 @@ type LogstashFrontKafka struct {
 	producer   sarama.SyncProducer
 	logChan    chan *logrus.Entry
 	fileLogger *logrus.Logger
-	appName    string
+	config     *LogstashFrontKafkaConfig
 }
 
-func NewLogstashFrontKafka(appName, fileLogPath string, kafkaAddrs []string) *LogstashFrontKafka {
+type LogstashFrontKafkaConfig struct {
+	//应用名,用于创建ES索引
+	AppName string
+	//连接ES失败时错误信息储存位置
+	FileLogPath string
+	//trace字段预设值
+	TracePrefix string
+	KafkaAddrs  []string
+}
+
+func NewLogstashFrontKafkaConfig() *LogstashFrontKafkaConfig {
+	return &LogstashFrontKafkaConfig{
+		FileLogPath: "logstash_front_error.log",
+	}
+}
+
+func NewLogstashFrontKafka(config *LogstashFrontKafkaConfig) *LogstashFrontKafka {
 	r := &LogstashFrontKafka{}
+	r.config = config
 	r.fileLogger = logrus.New()
-	r.appName = appName
-	src, err := os.OpenFile(fileLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend)
+
+	src, err := os.OpenFile(config.FileLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		panic(err)
 	}
@@ -34,15 +52,15 @@ func NewLogstashFrontKafka(appName, fileLogPath string, kafkaAddrs []string) *Lo
 	r.fileLogger.SetFormatter(&logrus.TextFormatter{})
 
 	r.logChan = make(chan *logrus.Entry, 300)
-	config := sarama.NewConfig()
+	saramaConfig := sarama.NewConfig()
 
 	// 等待服务器所有副本都保存成功后的响应
-	config.Producer.RequiredAcks = sarama.WaitForAll
+	saramaConfig.Producer.RequiredAcks = sarama.WaitForAll
 	// 随机的分区类型：返回一个分区器，该分区器每次选择一个随机分区
-	config.Producer.Partitioner = sarama.NewManualPartitioner
+	saramaConfig.Producer.Partitioner = sarama.NewManualPartitioner
 	// 是否等待成功和失败后的响应
-	config.Producer.Return.Successes = true
-	producer, err := sarama.NewSyncProducer(kafkaAddrs, config)
+	saramaConfig.Producer.Return.Successes = true
+	producer, err := sarama.NewSyncProducer(config.KafkaAddrs, saramaConfig)
 	if err != nil {
 		r.fileLogger.Panic(err)
 	}
@@ -104,7 +122,17 @@ type Hook struct {
 }
 
 func (h Hook) Fire(entry *logrus.Entry) error {
-	entryNew := entry.WithField("app", h.core.appName)
+	entryNew := entry.WithField("app", h.core.config.AppName)
+
+	if trace, ok := entry.Data["trace"]; ok {
+		if trace, ok := trace.(string); ok {
+			entryNew.Data["trace"] = strings.Join([]string{
+				h.core.config.TracePrefix,
+				trace,
+			}, "/")
+		}
+	}
+
 	entryNew.Level = entry.Level
 	entryNew.Message = entry.Message
 	entryNew.Time = entry.Time
