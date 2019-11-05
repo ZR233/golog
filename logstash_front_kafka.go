@@ -30,7 +30,6 @@ type LogstashFrontKafkaConfig struct {
 	//trace字段预设值
 	TracePrefix string
 	KafkaAddrs  []string
-	LogLevel    LogLevel
 }
 
 func NewLogstashFrontKafkaConfig() *LogstashFrontKafkaConfig {
@@ -44,12 +43,12 @@ func NewLogstashFrontKafka(config *LogstashFrontKafkaConfig) *LogstashFrontKafka
 	r.config = config
 	r.fileLogger = logrus.New()
 
-	src, err := os.OpenFile(config.FileLogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend)
+	file, err := os.OpenFile(config.FileLogPath, os.O_CREATE|os.O_APPEND|os.O_RDWR, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 
-	r.fileLogger.Out = src
+	r.fileLogger.Out = file
 	r.fileLogger.SetFormatter(&logrus.TextFormatter{})
 
 	r.logChan = make(chan *logrus.Entry, 300)
