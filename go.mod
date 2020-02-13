@@ -1,4 +1,4 @@
-module github.com
+module github.com/ZR233/golog
 
 go 1.12
 
