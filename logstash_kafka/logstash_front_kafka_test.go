@@ -8,15 +8,10 @@ import (
 
 func TestNewLogstashFrontKafka(t *testing.T) {
 
-	cfg := NewLogstashFrontKafkaConfig()
-	cfg.AppName = "test"
-	cfg.ZKHosts = []string{"192.168.0.3:2181"}
-
-	front := NewLogstashFrontKafka(cfg)
-
 	logrus.SetFormatter(&logrus.TextFormatter{})
-	logrus.AddHook(front.GetLogrusHook())
-	logrus.SetLevel(logrus.DebugLevel)
+
+	EnableLogrusLogstashKafka("test", "test", "/", []string{"192.168.0.3:2181"})
+
 	logrus.Info("test1")
 
 	i := 2
