@@ -102,25 +102,25 @@ func NewLogstashFrontKafka(config *LogstashFrontKafkaConfig) *FrontKafka {
 	return r
 }
 
-func (l *FrontKafka) openLogFile() {
+func (f *FrontKafka) openLogFile() {
 	var err error
 
-	l.logFile, err = os.OpenFile(l.config.FileLogPath, os.O_CREATE|os.O_APPEND|os.O_RDWR, os.ModePerm)
+	f.logFile, err = os.OpenFile(f.config.FileLogPath, os.O_CREATE|os.O_APPEND|os.O_RDWR, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (l *FrontKafka) eventLoop() {
+func (f *FrontKafka) eventLoop() {
 	for {
-		if l.status >= FrontStatusStopping {
+		if f.status >= FrontStatusStopping {
 			return
 		}
 
-		l.eventHandle()
+		f.eventHandle()
 	}
 }
-func (l *FrontKafka) eventHandle() {
+func (f *FrontKafka) eventHandle() {
 	defer func() {
 		if p := recover(); p != nil {
 			logrus.Error(fmt.Sprintf(logPrefix+"%s", p))
@@ -128,56 +128,56 @@ func (l *FrontKafka) eventHandle() {
 	}()
 
 	select {
-	case <-l.ctx.Done():
+	case <-f.ctx.Done():
 		return
 
-	case status, ok := <-l.statusChange:
+	case status, ok := <-f.statusChange:
 		if ok {
 			switch status {
 			case FrontStatusKafkaDisconnected:
-				l.onDisconnected()
+				f.onDisconnected()
 			case FrontStatusKafkaConnected:
-				l.status = FrontStatusKafkaConnected
+				f.status = FrontStatusKafkaConnected
 				logrus.Info(logPrefix + "kafka connect success")
-				go l.onConnected()
+				go f.onConnected()
 			}
 		}
 	}
 }
-func (l *FrontKafka) getFileLogAndClean() (data []byte) {
-	l.fileMu.Lock()
-	defer l.fileMu.Unlock()
+func (f *FrontKafka) getFileLogAndClean() (data []byte) {
+	f.fileMu.Lock()
+	defer f.fileMu.Unlock()
 
-	_, err := l.logFile.Seek(0, 0)
+	_, err := f.logFile.Seek(0, 0)
 	if err != nil {
 		panic(err)
 	}
-	data, err = ioutil.ReadAll(l.logFile)
+	data, err = ioutil.ReadAll(f.logFile)
 	if err != nil {
 		panic(err)
 	}
-	l.logFile.Close()
+	f.logFile.Close()
 
-	err = os.Truncate(l.config.FileLogPath, 0)
+	err = os.Truncate(f.config.FileLogPath, 0)
 	if err != nil {
 		panic(err)
 	}
-	l.openLogFile()
+	f.openLogFile()
 	return
 }
 
-func (l *FrontKafka) writeBackToFile(buf *bytes.Buffer) {
-	l.fileMu.Lock()
-	defer l.fileMu.Unlock()
+func (f *FrontKafka) writeBackToFile(buf *bytes.Buffer) {
+	f.fileMu.Lock()
+	defer f.fileMu.Unlock()
 
-	_, err := l.logFile.Write(buf.Bytes())
+	_, err := f.logFile.Write(buf.Bytes())
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (l *FrontKafka) onConnected() {
-	data := l.getFileLogAndClean()
+func (f *FrontKafka) onConnected() {
+	data := f.getFileLogAndClean()
 	buf := bytes.NewBuffer(data)
 	for {
 		line, err := buf.ReadBytes('\n')
@@ -186,8 +186,8 @@ func (l *FrontKafka) onConnected() {
 			return
 		}
 
-		if l.status != FrontStatusKafkaConnected {
-			l.writeBackToFile(buf)
+		if f.status != FrontStatusKafkaConnected {
+			f.writeBackToFile(buf)
 			return
 		}
 		var logStruct struct {
@@ -215,8 +215,8 @@ func (l *FrontKafka) onConnected() {
 		logrus.WithFields(logLine).WithTime(logTime).Log(level, logStruct.Message)
 	}
 }
-func (l *FrontKafka) writeEntryToKafka(entry *logrus.Entry) {
-	logBytes, err := l.kafkaFormatter().Format(entry)
+func (f *FrontKafka) writeEntryToKafka(entry *logrus.Entry) {
+	logBytes, err := f.kafkaFormatter().Format(entry)
 	if err != nil {
 		logrus.Panicf(logPrefix+"format entry error\n%s", err)
 	}
@@ -229,23 +229,23 @@ func (l *FrontKafka) writeEntryToKafka(entry *logrus.Entry) {
 	}
 
 	select {
-	case l.producer.Input() <- msg:
-	case errMsg := <-l.producer.Errors():
-		l.statusChange <- FrontStatusKafkaDisconnected
-		l.logChan <- errMsg.Msg.Metadata.(*logrus.Entry)
+	case f.producer.Input() <- msg:
+	case errMsg := <-f.producer.Errors():
+		f.statusChange <- FrontStatusKafkaDisconnected
+		f.logChan <- errMsg.Msg.Metadata.(*logrus.Entry)
 		logrus.Error(fmt.Sprintf("%s\nfail msg: %s", errMsg.Err, errMsg.Msg.Value.(sarama.ByteEncoder)))
 	}
 }
 
-func (l *FrontKafka) writeWorkKafka() {
+func (f *FrontKafka) writeWorkKafka() {
 	for {
-		if l.status == FrontStatusKafkaConnected {
+		if f.status == FrontStatusKafkaConnected {
 			select {
-			case <-l.ctx.Done():
+			case <-f.ctx.Done():
 				return
-			case entry, ok := <-l.logChan:
+			case entry, ok := <-f.logChan:
 				if ok {
-					l.writeEntryToKafka(entry)
+					f.writeEntryToKafka(entry)
 				}
 			}
 		} else {
@@ -254,20 +254,20 @@ func (l *FrontKafka) writeWorkKafka() {
 	}
 }
 
-func (l *FrontKafka) writeWorkFile() {
+func (f *FrontKafka) writeWorkFile() {
 	for {
-		if l.status != FrontStatusKafkaConnected {
+		if f.status != FrontStatusKafkaConnected {
 			select {
-			case <-l.ctx.Done():
+			case <-f.ctx.Done():
 				return
-			case entry, ok := <-l.logChan:
+			case entry, ok := <-f.logChan:
 				if ok {
-					if l.status == FrontStatusKafkaConnected {
-						l.logChan <- entry
+					if f.status == FrontStatusKafkaConnected {
+						f.logChan <- entry
 						continue
 					}
 
-					l.writeEntryToFile(entry)
+					f.writeEntryToFile(entry)
 				}
 			}
 		} else {
@@ -275,35 +275,35 @@ func (l *FrontKafka) writeWorkFile() {
 		}
 	}
 }
-func (l *FrontKafka) writeEntryToFile(entry *logrus.Entry) {
-	logBytes, err := l.kafkaFormatter().Format(entry)
+func (f *FrontKafka) writeEntryToFile(entry *logrus.Entry) {
+	logBytes, err := f.kafkaFormatter().Format(entry)
 	if err != nil {
 		logrus.Panicf(logPrefix+"format entry error\n%s", err)
 	}
 
-	l.fileMu.Lock()
-	defer l.fileMu.Unlock()
+	f.fileMu.Lock()
+	defer f.fileMu.Unlock()
 
-	_, err = fmt.Fprint(l.logFile, string(logBytes))
+	_, err = fmt.Fprint(f.logFile, string(logBytes))
 	if err != nil {
 		fmt.Println(logPrefix + "[error]write log to file: " + err.Error())
 	}
 }
 
-func (l *FrontKafka) onDisconnected() {
-	lastStatus := l.status
-	if l.status == FrontStatusKafkaConnecting {
+func (f *FrontKafka) onDisconnected() {
+	lastStatus := f.status
+	if f.status == FrontStatusKafkaConnecting {
 		return
 	}
-	l.status = FrontStatusKafkaConnecting
+	f.status = FrontStatusKafkaConnecting
 	success := false
 	defer func() {
 		if success {
-			l.statusChange <- FrontStatusKafkaConnected
+			f.statusChange <- FrontStatusKafkaConnected
 		} else {
-			l.status = FrontStatusKafkaReconnecting
+			f.status = FrontStatusKafkaReconnecting
 			time.Sleep(time.Millisecond * 100)
-			l.statusChange <- FrontStatusKafkaDisconnected
+			f.statusChange <- FrontStatusKafkaDisconnected
 		}
 	}()
 
@@ -315,7 +315,7 @@ func (l *FrontKafka) onDisconnected() {
 		}
 	}()
 
-	zkHosts := l.getBreakerHosts()
+	zkHosts := f.getBreakerHosts()
 
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Net.DialTimeout = time.Second * 5
@@ -332,16 +332,16 @@ func (l *FrontKafka) onDisconnected() {
 		return
 	}
 
-	l.producer = producer
-	l.status = FrontStatusKafkaConnected
+	f.producer = producer
+	f.status = FrontStatusKafkaConnected
 
 	success = true
 	return
 }
 
-func (l *FrontKafka) getBreakerHosts() (hosts []string) {
+func (f *FrontKafka) getBreakerHosts() (hosts []string) {
 
-	conn, _, err := zk.Connect(l.config.ZKHosts, time.Second*5)
+	conn, _, err := zk.Connect(f.config.ZKHosts, time.Second*5)
 	if err != nil {
 		panic(err)
 	}
@@ -378,7 +378,7 @@ func (l *FrontKafka) getBreakerHosts() (hosts []string) {
 	return
 }
 
-func (l *FrontKafka) kafkaFormatter() *logrus.JSONFormatter {
+func (f *FrontKafka) kafkaFormatter() *logrus.JSONFormatter {
 	return &logrus.JSONFormatter{
 		TimestampFormat: timestampFormat,
 		FieldMap: logrus.FieldMap{
@@ -390,8 +390,12 @@ func (l *FrontKafka) kafkaFormatter() *logrus.JSONFormatter {
 	}
 }
 
-func (l *FrontKafka) GetLogrusHook() Hook {
-	return Hook{l}
+func (f *FrontKafka) Log(entry *logrus.Entry) {
+	f.logChan <- entry
+}
+
+func (f *FrontKafka) GetLogrusHook() Hook {
+	return Hook{f}
 }
 
 type Hook struct {
@@ -412,7 +416,7 @@ func (h Hook) Fire(entry *logrus.Entry) error {
 	entryNew.Level = entry.Level
 	entryNew.Message = entry.Message
 	entryNew.Time = entry.Time
-	h.core.logChan <- entryNew
+	h.core.Log(entryNew)
 	return nil
 }
 func (h Hook) Levels() []logrus.Level {
