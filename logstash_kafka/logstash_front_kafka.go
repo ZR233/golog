@@ -23,7 +23,7 @@ import (
 const (
 	topic           = "logstash"
 	logPrefix       = "[golog]"
-	timestampFormat = "2006-01-02T15:04:05.999+08:00"
+	timestampFormat = "2006-01-02T15:04:05.999Z07:00"
 )
 
 type FrontStatus int

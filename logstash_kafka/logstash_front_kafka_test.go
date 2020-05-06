@@ -38,3 +38,12 @@ func TestLogstashFrontKafka_getBreakerHosts(t *testing.T) {
 	println(hosts)
 
 }
+
+func TestFrontKafka_TimeFormat(t *testing.T) {
+
+	now := time.Now()
+
+	str := now.Format("2006-01-02T15:04:05.999Z07:00")
+	str2 := now.Format(time.RFC3339)
+	println(str, str2)
+}
