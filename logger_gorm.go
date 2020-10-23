@@ -78,17 +78,17 @@ func (l LoggerGorm) Trace(ctx context.Context, begin time.Time, fc func() (strin
 	case elapsed > l.SlowThreshold && l.SlowThreshold != 0:
 		slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
 		if rows == -1 {
-			msg = fmt.Sprintf(l.traceWarnStr, utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			msg = fmt.Sprintf(l.traceWarnStr, file, slowLog, float64(elapsed.Nanoseconds())/1e6, "-", sql)
 		} else {
-			msg = fmt.Sprintf(l.traceWarnStr, utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			msg = fmt.Sprintf(l.traceWarnStr, file, slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
 		entry.Warn(msg)
 	default:
 		sql, rows := fc()
 		if rows == -1 {
-			msg = fmt.Sprintf(l.traceStr, utils.FileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			msg = fmt.Sprintf(l.traceStr, file, float64(elapsed.Nanoseconds())/1e6, "-", sql)
 		} else {
-			msg = fmt.Sprintf(l.traceStr, utils.FileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			msg = fmt.Sprintf(l.traceStr, file, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
 		entry.Debug(msg)
 	}
