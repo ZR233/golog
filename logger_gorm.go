@@ -60,28 +60,36 @@ func (l LoggerGorm) Error(ctx context.Context, s string, i ...interface{}) {
 
 func (l LoggerGorm) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
 	elapsed := time.Since(begin)
+	sql, rows := fc()
+	msg := ""
+	file := utils.FileWithLineNum()
+	entry := logrus.WithFields(logrus.Fields{
+		"execTime": elapsed.Milliseconds(),
+		"file":     file,
+	})
 	switch {
 	case err != nil && !errors.Is(err, gorm.ErrRecordNotFound):
-		sql, rows := fc()
 		if rows == -1 {
-			logrus.Errorf(l.traceErrStr, utils.FileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			msg = fmt.Sprintf(l.traceErrStr, file, err, float64(elapsed.Nanoseconds())/1e6, "-", sql)
 		} else {
-			logrus.Errorf(l.traceErrStr, utils.FileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			msg = fmt.Sprintf(l.traceErrStr, file, err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
+		entry.Error(msg)
 	case elapsed > l.SlowThreshold && l.SlowThreshold != 0:
-		sql, rows := fc()
 		slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
 		if rows == -1 {
-			logrus.Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			msg = fmt.Sprintf(l.traceWarnStr, utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, "-", sql)
 		} else {
-			logrus.Warnf(l.traceWarnStr, utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			msg = fmt.Sprintf(l.traceWarnStr, utils.FileWithLineNum(), slowLog, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
+		entry.Warn(msg)
 	default:
 		sql, rows := fc()
 		if rows == -1 {
-			logrus.Debugf(l.traceStr, utils.FileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			msg = fmt.Sprintf(l.traceStr, utils.FileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, "-", sql)
 		} else {
-			logrus.Debugf(l.traceStr, utils.FileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			msg = fmt.Sprintf(l.traceStr, utils.FileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
+		entry.Debug(msg)
 	}
 }
