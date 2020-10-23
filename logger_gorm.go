@@ -2,8 +2,10 @@ package golog
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
 	"time"
@@ -59,7 +61,7 @@ func (l LoggerGorm) Error(ctx context.Context, s string, i ...interface{}) {
 func (l LoggerGorm) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
 	elapsed := time.Since(begin)
 	switch {
-	case err != nil:
+	case err != nil && !errors.Is(err, gorm.ErrRecordNotFound):
 		sql, rows := fc()
 		if rows == -1 {
 			logrus.Errorf(l.traceErrStr, utils.FileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, "-", sql)
