@@ -7,7 +7,7 @@ package golog
 import (
 	"fmt"
 	"github.com/ZR233/goutils"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	log2 "log"
 	"strings"
 	"time"
@@ -28,13 +28,13 @@ type WriterSQL struct {
 //     }
 // GORM has wrapped some drivers, for easier to remember driver's import path, so you could import the mysql driver with
 //    import _ "github.com/jinzhu/gorm/dialects/mysql"
-//    // import _ "github.com/jinzhu/gorm/dialects/postgres"
-//    // import _ "github.com/jinzhu/gorm/dialects/sqlite"
-//    // import _ "github.com/jinzhu/gorm/dialects/mssql"
-func NewWriterSQL(dialect, connStr, logTableName string) *WriterSQL {
+//    // import _ "gorm.io/gorm/postgres"
+//    // import _ "gorm.io/gorm/sqlite"
+//    // import _ "gorm.io/gorm/mssql"
+func NewWriterSQL(dialector gorm.Dialector, config *gorm.Config, logTableName string) *WriterSQL {
 	w := &WriterSQL{}
 
-	db, err := gorm.Open(dialect, connStr)
+	db, err := gorm.Open(dialector, config)
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +92,7 @@ loop:
 		return
 	}
 
-	sqlStr := `INSERT INTO ` + w.logTableName + `(time,trace,level,code,opt_user_id,msg,exec_time)VALUES`
+	sqlStr := `INSERT INTO ` + w.logTableName + `(time,trace,LogLevel,code,opt_user_id,msg,exec_time)VALUES`
 
 	var args []interface{}
 	db := w.db

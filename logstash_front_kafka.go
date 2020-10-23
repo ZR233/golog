@@ -229,7 +229,7 @@ func (l *LogstashFrontKafka) GetLogrusFormatter() *logrus.JSONFormatter {
 		TimestampFormat: "2006-01-02T15:04:05.999+08:00",
 		FieldMap: logrus.FieldMap{
 			logrus.FieldKeyTime:  "@timestamp",
-			logrus.FieldKeyLevel: "level",
+			logrus.FieldKeyLevel: "LogLevel",
 			logrus.FieldKeyMsg:   "message",
 			logrus.FieldKeyFunc:  "caller",
 		},
