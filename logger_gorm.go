@@ -28,26 +28,21 @@ func NewLoggerGorm(slowThreshold time.Duration) logger.Interface {
 		traceStr:      traceStr,
 		traceWarnStr:  traceWarnStr,
 		traceErrStr:   traceErrStr,
+		LogLevel:      logger.Warn,
 	}
 }
 
 func (l *LoggerGorm) LogMode(level logger.LogLevel) logger.Interface {
 	l.LogLevel = level
-	switch level {
-	case logger.Silent:
-		logrus.SetLevel(logrus.FatalLevel)
-	case logger.Info:
-		logrus.SetLevel(logrus.InfoLevel)
-	case logger.Warn:
-		logrus.SetLevel(logrus.WarnLevel)
-	case logger.Error:
-		logrus.SetLevel(logrus.ErrorLevel)
-	}
 	return l
 }
 
 func (l LoggerGorm) Info(ctx context.Context, s string, i ...interface{}) {
-	logrus.Infof(s, i...)
+	if l.LogLevel == logger.Info {
+		logrus.Infof(s, i...)
+	} else {
+		logrus.Debugf(s, i...)
+	}
 }
 
 func (l LoggerGorm) Warn(ctx context.Context, s string, i ...interface{}) {
@@ -90,6 +85,10 @@ func (l LoggerGorm) Trace(ctx context.Context, begin time.Time, fc func() (strin
 		} else {
 			msg = fmt.Sprintf(l.traceStr, file, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
-		entry.Debug(msg)
+		if l.LogLevel == logger.Info {
+			entry.Info(msg)
+		} else {
+			entry.Debug(msg)
+		}
 	}
 }
